@@ -259,8 +259,8 @@ def level16(p):
     
 
 #p = process('/challenge/babyheap_level16.0')
-p = process(['./ld-2.31.so', '--preload', './libc.so.6', './babyheap_level16.0'])
-#p = gdb.debug(['./ld-2.31.so', '--preload', './libc.so.6', './babyheap_level16.0'], gdbscript= '''
+#p = process(['./ld-2.31.so', '--preload', './libc.so.6', './babyheap_level16.0'])
+p = gdb.debug(['./ld-2.35.so', '--preload', './libc.so.6', './babyheap_level16.0'], gdbscript= '''
 #set follow-fork-mode parent
 #c
 #''')
