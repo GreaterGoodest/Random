@@ -1,6 +1,17 @@
 #!/usr/bin/python
 '''
 Expects glibc 2.34, use ./change_glibc_version.py to set.
+
+This exploit is to show a tcache overflow on a modern libc.
+We overflow a chunk into a free chunk, overwriting its FD pointer.
+This allows us to request a chunk that is not in the heap, and is within the GOT.
+We overwrite the GOT entry (write) with a valid One Gadget to get execution.
+
+I have the script set up to run the exploit within GDB, as it won't work on
+a modern linux kernel unfortunately due to CET (introduced in Linux 6.4).
+
+First time I've run into this mitigation and there's not much out there on it.
+I'll probably keep playing with this to see if I can bypass it.
 '''
 from pwn import *
 from testbed import *
