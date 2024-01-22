@@ -79,11 +79,14 @@ def tcache_overflow(p):
 
 
 # Running exploit in debugger in case you are on kernel >= 6.4... CET is an issue.
-p = gdb.debug('./malloc_testbed', '''
-c            
-''')
+#p = gdb.debug('./malloc_testbed', '''
+#c            
+#''')
 
-#p = process('./malloc_testbed')
+p = process('./malloc_testbed')
+gdb.attach(p, '''
+c         
+''')
 
 tcache_overflow(p)
 
