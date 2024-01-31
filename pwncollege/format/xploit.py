@@ -34,6 +34,9 @@ def level_5_0(p):
            p64(0x404138) + p64(0x40413a) + p64(0x40413c) + p64(0x40413e)
     p.sendafter('Send your data!', data)
 
+def level_5_1(p):
+    ''''''
+
 
 level = 5.0
 p = process(f'/challenge/babyfmt_level{level}')
