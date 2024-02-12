@@ -87,3 +87,5 @@ p = process('./malloc_testbed')
 tcache_overflow(p)
 
 p.interactive()
+
+0x0000000000400c08
