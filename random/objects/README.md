@@ -13,5 +13,7 @@ I also had to do this in docker, as CET was pretty much impossible to get around
 # Instructions
 
 Run ./run.sh and navigate to the /root directory.
+
 Run ./exploit.py
+
 Enjoy shell
