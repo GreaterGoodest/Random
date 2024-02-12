@@ -29,7 +29,7 @@ void store(char *data)
 
 int main()
 {
-    printf("System's addres: %p\n", system);
+    printf("puts address: %p\n", puts);
 
     std::string command;
     char data[128] = {0};
@@ -54,6 +54,7 @@ int main()
             if (NULL == logbook)
             {
                 logbook = new MyLog();
+                printf("heap leak: %p\n", logbook);
             }else{
                 std::cout << "Logbook already created" << std::endl;
             }

@@ -1,0 +1,4 @@
+#!/bin/sh
+
+docker build . -t object-uaf
+docker run -it -e "color_prompt=yes" -v .:/root object-uaf bash 
