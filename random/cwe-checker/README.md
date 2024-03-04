@@ -5,4 +5,5 @@ Uses cwe_checker in combination with Ghidra in a docker container to check for c
 # Running
 
 make
+
 make check
