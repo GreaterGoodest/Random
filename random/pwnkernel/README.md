@@ -8,11 +8,18 @@ Build binaries:
 cd src && make
 ```
 
-Build and launch environment:
+Build environment:
 
 
 ```
 $ ./build.sh
+```
+
+Move binaries:
+
+```
+$ cp ./src/interact ./fs/
+$ cp ./src/mydev.ko ./fs/
 ```
 
 Running the kernel:
