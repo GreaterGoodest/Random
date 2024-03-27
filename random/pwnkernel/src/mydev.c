@@ -24,15 +24,17 @@ static int device_release(struct inode *inode, struct file *filp)
 
 static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_t *offset)
 {
-	return copy_to_user(buffer, data, BUFSIZE) ? -EFAULT : 0;
+	int write_size = (length < BUFSIZE) ? length : BUFSIZE;
+
+	return copy_to_user(buffer, data, write_size) ? -EFAULT : 0;
 }
 
-static ssize_t device_write(struct file *filp, const char *buf, size_t len, loff_t *off)
+static ssize_t device_write(struct file *filp, const char *buf, size_t length, loff_t *off)
 {
-	if (strlen(buf) < BUFSIZE)
-	{
-		return copy_from_user(data, buf, BUFSIZE) ? -EFAULT : 0;
-	}
+	int write_size = (length < BUFSIZE) ? length : BUFSIZE;
+
+	return copy_from_user(data, buf, write_size) ? -EFAULT : 0;
+
   	return -EFAULT;
 }
 
